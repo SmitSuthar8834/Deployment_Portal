@@ -418,20 +418,64 @@
                     <h4>${env.displayName}</h4>
                     <p><strong>URL:</strong> ${env.url}</p>
                     <p><strong>Description:</strong> ${env.description}</p>
-                    <button onclick="checkEnvStatus('${env.name}')" style="width: auto; padding: 5px 10px; font-size: 12px;">
+                    <button onclick="checkEnvStatus('${env.name}')" style="width: auto; padding: 5px 10px; font-size: 12px; margin-right: 10px;">
                         Check Status
+                    </button>
+                    <button onclick="removeEnvironment('${env.name}')" style="width: auto; padding: 5px 10px; font-size: 12px; background-color: #dc3545;">
+                        Remove
                     </button>
                 </div>
             `).join('');
             
             content.innerHTML = `
                 <div style="margin-bottom: 20px;">
-                    <h3>Available Environments</h3>
+                    <h3>🌍 Available Environments</h3>
                     ${envList}
                 </div>
                 <div style="border-top: 1px solid #ddd; padding-top: 20px;">
-                    <h3>Register New Environment</h3>
-                    <p><em>Feature coming soon - Add new Creatio environments dynamically</em></p>
+                    <h3>➕ Register New Environment</h3>
+                    <form id="envRegistrationForm" onsubmit="registerNewEnvironment(event)">
+                        <div style="margin-bottom: 15px;">
+                            <label for="envName" style="display: block; margin-bottom: 5px; font-weight: bold;">Environment Name:</label>
+                            <input type="text" id="envName" name="name" required 
+                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
+                                   placeholder="e.g., uat, demo, client-test">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label for="envDisplayName" style="display: block; margin-bottom: 5px; font-weight: bold;">Display Name:</label>
+                            <input type="text" id="envDisplayName" name="displayName" required 
+                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
+                                   placeholder="e.g., UAT Environment, Demo Site">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label for="envUrl" style="display: block; margin-bottom: 5px; font-weight: bold;">Creatio URL:</label>
+                            <input type="url" id="envUrl" name="url" required 
+                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
+                                   placeholder="https://your-site.creatio.com">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label for="envLogin" style="display: block; margin-bottom: 5px; font-weight: bold;">Login:</label>
+                            <input type="email" id="envLogin" name="login" required 
+                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
+                                   placeholder="admin@your-site.creatio.com">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label for="envPassword" style="display: block; margin-bottom: 5px; font-weight: bold;">Password:</label>
+                            <input type="password" id="envPassword" name="password" required 
+                                   style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
+                                   placeholder="Enter password">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label for="envDescription" style="display: block; margin-bottom: 5px; font-weight: bold;">Description:</label>
+                            <textarea id="envDescription" name="description" 
+                                      style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; height: 60px;"
+                                      placeholder="Brief description of this environment"></textarea>
+                        </div>
+                        <button type="submit" style="width: 100%; padding: 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            🚀 Register Environment
+                        </button>
+                    </form>
+                    <div id="envRegistrationResult" style="margin-top: 15px; display: none;"></div>
                 </div>
             `;
             
@@ -447,6 +491,83 @@
                 alert(`Environment: ${envName}\nStatus: ${status.status}\nActive Packages: ${status.activePackages}\nLast Deployment: ${new Date(status.lastDeployment).toLocaleString()}`);
             } catch (error) {
                 alert('Failed to check environment status: ' + error.message);
+            }
+        }
+
+        // Register new environment
+        async function registerNewEnvironment(event) {
+            event.preventDefault();
+            
+            const form = event.target;
+            const formData = new FormData(form);
+            const resultDiv = document.getElementById('envRegistrationResult');
+            
+            const envData = {
+                name: formData.get('name'),
+                displayName: formData.get('displayName'),
+                url: formData.get('url'),
+                login: formData.get('login'),
+                password: formData.get('password'),
+                description: formData.get('description')
+            };
+            
+            // Show loading state
+            resultDiv.innerHTML = '<div style="color: #007bff;">⏳ Registering environment...</div>';
+            resultDiv.style.display = 'block';
+            
+            try {
+                const response = await fetch('http://localhost:3000/environments', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(envData)
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    resultDiv.innerHTML = `<div style="color: #28a745; padding: 10px; background-color: #d4edda; border-radius: 4px;">✅ ${result.message}</div>`;
+                    form.reset();
+                    
+                    // Refresh environments list
+                    await loadEnvironments();
+                    
+                    // Close modal after success
+                    setTimeout(() => {
+                        closeModal('environmentsModal');
+                        showResult('Environment registered successfully! Available in dropdown.', 'success');
+                    }, 2000);
+                } else {
+                    resultDiv.innerHTML = `<div style="color: #dc3545; padding: 10px; background-color: #f8d7da; border-radius: 4px;">❌ ${result.error}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div style="color: #dc3545; padding: 10px; background-color: #f8d7da; border-radius: 4px;">❌ Registration failed: ${error.message}</div>`;
+            }
+        }
+
+        // Remove environment
+        async function removeEnvironment(envName) {
+            if (!confirm(`Are you sure you want to remove the '${envName}' environment?\n\nThis action cannot be undone.`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:3000/environments/${envName}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    showResult(`Environment '${envName}' removed successfully!`, 'success');
+                    await loadEnvironments();
+                    closeModal('environmentsModal');
+                } else {
+                    alert(`Failed to remove environment: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`Failed to remove environment: ${error.message}`);
             }
         }
 

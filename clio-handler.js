@@ -209,23 +209,91 @@ class ClioHandler {
     // Register new Creatio environment
     async registerEnvironment(envData) {
         try {
-            const { name, url, login, password } = envData;
+            const { name, displayName, url, login, password, description } = envData;
+            
+            // Check if environment already exists
+            const existingEnv = this.creatioEnvironments.find(env => env.name === name);
+            if (existingEnv) {
+                return {
+                    success: false,
+                    message: `Environment '${name}' already exists`,
+                    error: 'Environment name conflict'
+                };
+            }
             
             // In real implementation:
             // const command = `${config.clio.registerEnvCommand} ${name} -u ${url} -l ${login} -p ${password}`;
             // const { stdout } = await execAsync(command);
             
-            console.log(`Registering environment: ${name} at ${url}`);
+            console.log(`Registering environment: ${name} (${displayName}) at ${url}`);
+            
+            // Add to runtime environments list
+            const newEnv = {
+                name: name,
+                displayName: displayName || name,
+                url: url,
+                login: login,
+                password: password,
+                description: description || `${displayName} environment`
+            };
+            
+            this.creatioEnvironments.push(newEnv);
             
             return {
                 success: true,
-                message: `Environment ${name} registered successfully`,
+                message: `Environment '${displayName}' registered successfully`,
                 environment: name
             };
         } catch (error) {
             return {
                 success: false,
                 message: `Failed to register environment: ${error.message}`,
+                error: error.message
+            };
+        }
+    }
+
+    // Remove environment
+    async removeEnvironment(envName) {
+        try {
+            const envIndex = this.creatioEnvironments.findIndex(env => env.name === envName);
+            
+            if (envIndex === -1) {
+                return {
+                    success: false,
+                    message: `Environment '${envName}' not found`,
+                    error: 'Environment not found'
+                };
+            }
+            
+            // Prevent removal of default environments from .env
+            const defaultEnvs = ['development', 'test', 'staging', 'production'];
+            if (defaultEnvs.includes(envName)) {
+                return {
+                    success: false,
+                    message: `Cannot remove default environment '${envName}'. Please modify .env file instead.`,
+                    error: 'Cannot remove default environment'
+                };
+            }
+            
+            // In real implementation:
+            // const command = `${config.clio.removeEnvCommand} ${envName}`;
+            // const { stdout } = await execAsync(command);
+            
+            console.log(`Removing environment: ${envName}`);
+            
+            // Remove from runtime environments list
+            this.creatioEnvironments.splice(envIndex, 1);
+            
+            return {
+                success: true,
+                message: `Environment '${envName}' removed successfully`,
+                environment: envName
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: `Failed to remove environment: ${error.message}`,
                 error: error.message
             };
         }

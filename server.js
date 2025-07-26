@@ -41,21 +41,46 @@ app.get('/package-types', (req, res) => {
 // Endpoint to register new Creatio environment
 app.post('/environments', async (req, res) => {
   try {
-    const { name, url, login, password } = req.body;
+    const { name, displayName, url, login, password, description } = req.body;
     
     if (!name || !url || !login) {
       return res.status(400).json({ error: 'Name, URL, and login are required' });
     }
 
-    const result = await clioHandler.registerEnvironment({ name, url, login, password });
+    const result = await clioHandler.registerEnvironment({ 
+      name, 
+      displayName, 
+      url, 
+      login, 
+      password, 
+      description 
+    });
     
     if (result.success) {
       res.json({ message: result.message, environment: result.environment });
     } else {
-      res.status(500).json({ error: result.message });
+      res.status(400).json({ error: result.message });
     }
   } catch (error) {
     console.error('Environment registration error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Endpoint to remove Creatio environment
+app.delete('/environments/:name', async (req, res) => {
+  try {
+    const { name } = req.params;
+    
+    const result = await clioHandler.removeEnvironment(name);
+    
+    if (result.success) {
+      res.json({ message: result.message, environment: result.environment });
+    } else {
+      res.status(400).json({ error: result.message });
+    }
+  } catch (error) {
+    console.error('Environment removal error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
