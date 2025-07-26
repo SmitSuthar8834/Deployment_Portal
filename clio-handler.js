@@ -6,7 +6,44 @@ const config = require('./config');
 class ClioHandler {
     constructor() {
         this.deploymentHistory = [];
-        this.creatioEnvironments = config.creatioEnvironments;
+        // Dynamically configure environments using .env
+        this.creatioEnvironments = [
+            {
+                name: 'development',
+                displayName: 'Development',
+                url: process.env.CREATIO_DEV_URL,
+                login: process.env.CREATIO_DEV_LOGIN,
+                password: process.env.CREATIO_DEV_PASSWORD,
+                description: 'Development environment for testing'
+            },
+            {
+                name: 'test',
+                displayName: 'Test',
+                url: process.env.CREATIO_TEST_URL,
+                login: process.env.CREATIO_TEST_LOGIN,
+                password: process.env.CREATIO_TEST_PASSWORD,
+                description: 'Test environment for validations'
+            },
+            {
+                name: 'staging',
+                displayName: 'Staging',
+                url: process.env.CREATIO_STAGING_URL,
+                login: process.env.CREATIO_STAGING_LOGIN,
+                password: process.env.CREATIO_STAGING_PASSWORD,
+                description: 'Staging environment for pre-production'
+            },
+            {
+                name: 'production',
+                displayName: 'Production',
+                url: process.env.CREATIO_PROD_URL,
+                login: process.env.CREATIO_PROD_LOGIN,
+                password: process.env.CREATIO_PROD_PASSWORD,
+                description: 'Production environment'
+            }
+        ];
+
+        // Mock data flag
+        this.mockDataEnabled = process.env.MOCK_DATA_ENABLED === 'true';
     }
 
     // Execute Clio command for deployment
@@ -22,13 +59,13 @@ class ClioHandler {
             let command;
             switch (packageType) {
                 case 'app':
-                    command = `${config.clio.installAppCommand} ${packageName} -e ${envConfig.environment}`;
+                    command = `${config.clio.installAppCommand} ${packageName} -e ${envConfig.name}`;
                     break;
                 case 'pkg':
-                    command = `${config.clio.installPackageCommand} ${packageName} -e ${envConfig.environment}`;
+                    command = `${config.clio.installPackageCommand} ${packageName} -e ${envConfig.name}`;
                     break;
                 default:
-                    command = `${config.clio.installAppCommand} ${packageName} -e ${envConfig.environment}`;
+                    command = `${config.clio.installAppCommand} ${packageName} -e ${envConfig.name}`;
             }
 
             console.log(`Executing: ${command}`);
@@ -78,48 +115,81 @@ class ClioHandler {
         }
     }
 
-    // Get available packages (this could query your Clio setup)
+    // Get available packages from all configured environments
     async getAvailablePackages() {
         try {
-            // In real implementation, you might run: clio get-pkg-list
-            // For demo, return mock Creatio packages
-            return [
-                { 
-                    name: 'CrtCustomerMgmt', 
-                    version: '1.2.3', 
-                    description: 'Creatio Customer Management Package',
-                    type: 'pkg',
-                    lastModified: '2024-01-15'
-                },
-                { 
-                    name: 'CrtOrderProcessing', 
-                    version: '2.1.0', 
-                    description: 'Order Processing Business Logic',
-                    type: 'app',
-                    lastModified: '2024-01-10'
-                },
-                { 
-                    name: 'CrtInventoryTracker', 
-                    version: '1.5.7', 
-                    description: 'Inventory Management System',
-                    type: 'pkg',
-                    lastModified: '2024-01-08'
-                },
-                { 
-                    name: 'CrtReportingTool', 
-                    version: '3.0.1', 
-                    description: 'Advanced Reporting Dashboard',
-                    type: 'app',
-                    lastModified: '2024-01-12'
-                },
-                { 
-                    name: 'CrtIntegrationPack', 
-                    version: '1.0.5', 
-                    description: 'Third-party Integration Package',
-                    type: 'template',
-                    lastModified: '2024-01-20'
-                }
-            ];
+            if (this.mockDataEnabled) {
+                // Return mock Creatio packages for demo
+                return [
+                    { 
+                        name: 'CrtCustomerMgmt', 
+                        version: '1.2.3', 
+                        description: 'Creatio Customer Management Package',
+                        type: 'pkg',
+                        lastModified: '2024-01-15',
+                        size: '2.4 MB'
+                    },
+                    { 
+                        name: 'CrtOrderProcessing', 
+                        version: '2.1.0', 
+                        description: 'Order Processing Business Logic',
+                        type: 'app',
+                        lastModified: '2024-01-10',
+                        size: '5.2 MB'
+                    },
+                    { 
+                        name: 'CrtInventoryTracker', 
+                        version: '1.5.7', 
+                        description: 'Inventory Management System',
+                        type: 'pkg',
+                        lastModified: '2024-01-08',
+                        size: '3.1 MB'
+                    },
+                    { 
+                        name: 'CrtReportingTool', 
+                        version: '3.0.1', 
+                        description: 'Advanced Reporting Dashboard',
+                        type: 'app',
+                        lastModified: '2024-01-12',
+                        size: '4.8 MB'
+                    },
+                    { 
+                        name: 'CrtIntegrationPack', 
+                        version: '1.0.5', 
+                        description: 'Third-party Integration Package',
+                        type: 'template',
+                        lastModified: '2024-01-20',
+                        size: '1.9 MB'
+                    },
+                    { 
+                        name: 'CrtSalesAutomation', 
+                        version: '2.3.1', 
+                        description: 'Sales Process Automation',
+                        type: 'app',
+                        lastModified: '2024-01-18',
+                        size: '6.7 MB'
+                    },
+                    { 
+                        name: 'CrtMarketingCampaigns', 
+                        version: '1.8.4', 
+                        description: 'Marketing Campaign Management',
+                        type: 'pkg',
+                        lastModified: '2024-01-22',
+                        size: '3.5 MB'
+                    }
+                ];
+            } else {
+                // Real implementation: Query packages from Creatio environments
+                console.log('Fetching packages from Creatio environments...');
+                
+                // Example command: clio get-pkg-list
+                // const { stdout } = await execAsync('clio get-pkg-list');
+                // Parse the output and return structured data
+                
+                // For now, return empty array when not in mock mode
+                // You would parse the actual Clio output here
+                return [];
+            }
         } catch (error) {
             console.error('Error fetching packages:', error);
             return [];

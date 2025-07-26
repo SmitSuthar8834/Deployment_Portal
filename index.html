@@ -130,6 +130,29 @@
         }
         .status-success { border-left-color: #28a745; }
         .status-failed { border-left-color: #dc3545; }
+        .package-info {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            color: #495057;
+            font-size: 14px;
+        }
+        .package-type {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .type-app { background-color: #007bff; color: white; }
+        .type-pkg { background-color: #28a745; color: white; }
+        .type-template { background-color: #ffc107; color: black; }
+        .enhanced-select {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -138,9 +161,13 @@
         
         <div class="form-group">
             <label for="packageSelect">Select Package:</label>
-            <select id="packageSelect">
+            <select id="packageSelect" class="enhanced-select">
                 <option value="">Loading packages...</option>
             </select>
+        </div>
+        
+        <div id="packageInfo" class="package-info" style="display: none;">
+            <div id="pkgDetails"></div>
         </div>
         
         <div class="form-group">
@@ -211,7 +238,33 @@
                     const option = document.createElement('option');
                     option.value = pkg.name;
                     option.textContent = `${pkg.name} (v${pkg.version}) - ${pkg.description}`;
+                    option.dataset.type = pkg.type;
+                    option.dataset.size = pkg.size;
+                    option.dataset.version = pkg.version;
+                    option.dataset.description = pkg.description;
+                    option.dataset.lastModified = pkg.lastModified;
                     select.appendChild(option);
+                });
+                
+                // Add event listener to show package info
+                select.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const pkgInfo = document.getElementById('packageInfo');
+                    const pkgDetails = document.getElementById('pkgDetails');
+                    
+                    if (selectedOption.dataset.type) {
+                        pkgDetails.innerHTML = `
+                            <strong>${selectedOption.value}</strong>
+                            <span class="package-type type-${selectedOption.dataset.type}">${selectedOption.dataset.type.toUpperCase()}</span><br>
+                            <small><strong>Version:</strong> ${selectedOption.dataset.version}</small><br>
+                            <small><strong>Size:</strong> ${selectedOption.dataset.size}</small><br>
+                            <small><strong>Last Modified:</strong> ${selectedOption.dataset.lastModified}</small><br>
+                            <small><strong>Description:</strong> ${selectedOption.dataset.description}</small>
+                        `;
+                        pkgInfo.style.display = 'block';
+                    } else {
+                        pkgInfo.style.display = 'none';
+                    }
                 });
                 
                 checkFormComplete();
