@@ -73,11 +73,68 @@
             text-align: center;
             color: #007bff;
         }
+        .environment-info {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            color: #6c757d;
+        }
+        .additional-actions button {
+            width: auto;
+            padding: 8px 16px;
+            margin: 5px;
+            font-size: 14px;
+        }
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 20px;
+            border-radius: 8px;
+            width: 80%;
+            max-width: 600px;
+            max-height: 80%;
+            overflow-y: auto;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close:hover {
+            color: black;
+        }
+        .env-card {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .history-item {
+            border-left: 4px solid #007bff;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: #f8f9fa;
+        }
+        .status-success { border-left-color: #28a745; }
+        .status-failed { border-left-color: #dc3545; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Deployment Portal</h1>
+        <h1>🚀 Creatio Deployment Portal</h1>
         
         <div class="form-group">
             <label for="packageSelect">Select Package:</label>
@@ -87,17 +144,49 @@
         </div>
         
         <div class="form-group">
-            <label for="environmentSelect">Select Target Environment:</label>
+            <label for="environmentSelect">Select Creatio Environment:</label>
             <select id="environmentSelect">
                 <option value="">Loading environments...</option>
             </select>
         </div>
         
+        <div id="environmentInfo" class="environment-info" style="display: none;">
+            <small id="envDescription"></small><br>
+            <small id="envUrl"></small>
+        </div>
+        
         <button id="deployBtn" onclick="triggerDeployment()" disabled>
-            Deploy Package
+            Deploy to Creatio
         </button>
         
+        <div class="additional-actions" style="margin-top: 20px;">
+            <button onclick="showHistory()" style="background-color: #28a745; margin-right: 10px;">
+                📊 View History
+            </button>
+            <button onclick="showEnvironments()" style="background-color: #17a2b8;">
+                🌍 Manage Environments
+            </button>
+        </div>
+        
         <div id="result" class="result"></div>
+        
+        <!-- History Modal -->
+        <div id="historyModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('historyModal')">&times;</span>
+                <h2>Deployment History</h2>
+                <div id="historyContent"></div>
+            </div>
+        </div>
+        
+        <!-- Environments Modal -->
+        <div id="environmentsModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal('environmentsModal')">&times;</span>
+                <h2>Creatio Environments</h2>
+                <div id="environmentsContent"></div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -141,9 +230,27 @@
                 
                 environments.forEach(env => {
                     const option = document.createElement('option');
-                    option.value = env;
-                    option.textContent = env.charAt(0).toUpperCase() + env.slice(1);
+                    option.value = env.name;
+                    option.textContent = `${env.displayName} (${env.url})`;
+                    option.dataset.description = env.description;
+                    option.dataset.url = env.url;
                     select.appendChild(option);
+                });
+                
+                // Add event listener to show environment info
+                select.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const envInfo = document.getElementById('environmentInfo');
+                    const envDescription = document.getElementById('envDescription');
+                    const envUrl = document.getElementById('envUrl');
+                    
+                    if (selectedOption.dataset.description) {
+                        envDescription.textContent = selectedOption.dataset.description;
+                        envUrl.textContent = `URL: ${selectedOption.dataset.url}`;
+                        envInfo.style.display = 'block';
+                    } else {
+                        envInfo.style.display = 'none';
+                    }
                 });
                 
                 checkFormComplete();
@@ -214,6 +321,90 @@
                     resultDiv.style.display = 'none';
                 }, 5000);
             }
+        }
+
+        // Modal functions
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        // Show deployment history
+        async function showHistory() {
+            try {
+                const response = await fetch('http://localhost:3000/history');
+                const history = await response.json();
+                
+                const content = document.getElementById('historyContent');
+                
+                if (history.length === 0) {
+                    content.innerHTML = '<p>No deployment history found.</p>';
+                } else {
+                    content.innerHTML = history.map(item => `
+                        <div class="history-item status-${item.status}">
+                            <strong>${item.package}</strong> → ${item.environment}<br>
+                            <small>Status: ${item.status}</small><br>
+                            <small>Time: ${new Date(item.timestamp).toLocaleString()}</small><br>
+                            ${item.output ? `<small>Output: ${item.output}</small>` : ''}
+                            ${item.error ? `<small style="color: red;">Error: ${item.error}</small>` : ''}
+                        </div>
+                    `).join('');
+                }
+                
+                document.getElementById('historyModal').style.display = 'block';
+            } catch (error) {
+                showResult('Failed to load history: ' + error.message, 'error');
+            }
+        }
+
+        // Show environments management
+        async function showEnvironments() {
+            const content = document.getElementById('environmentsContent');
+            
+            const envList = environments.map(env => `
+                <div class="env-card">
+                    <h4>${env.displayName}</h4>
+                    <p><strong>URL:</strong> ${env.url}</p>
+                    <p><strong>Description:</strong> ${env.description}</p>
+                    <button onclick="checkEnvStatus('${env.name}')" style="width: auto; padding: 5px 10px; font-size: 12px;">
+                        Check Status
+                    </button>
+                </div>
+            `).join('');
+            
+            content.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    <h3>Available Environments</h3>
+                    ${envList}
+                </div>
+                <div style="border-top: 1px solid #ddd; padding-top: 20px;">
+                    <h3>Register New Environment</h3>
+                    <p><em>Feature coming soon - Add new Creatio environments dynamically</em></p>
+                </div>
+            `;
+            
+            document.getElementById('environmentsModal').style.display = 'block';
+        }
+
+        // Check environment status
+        async function checkEnvStatus(envName) {
+            try {
+                const response = await fetch(`http://localhost:3000/status/${envName}`);
+                const status = await response.json();
+                
+                alert(`Environment: ${envName}\nStatus: ${status.status}\nActive Packages: ${status.activePackages}\nLast Deployment: ${new Date(status.lastDeployment).toLocaleString()}`);
+            } catch (error) {
+                alert('Failed to check environment status: ' + error.message);
+            }
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modals = document.querySelectorAll('.modal');
+            modals.forEach(modal => {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
         }
     </script>
 </body>

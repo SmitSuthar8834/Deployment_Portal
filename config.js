@@ -1,4 +1,4 @@
-// Configuration file for the Deployment Portal
+// Configuration file for the Creatio Deployment Portal
 
 module.exports = {
     // Server configuration
@@ -9,39 +9,87 @@ module.exports = {
         }
     },
 
-    // Environment configuration
-    environments: [
+    // Creatio Environment configuration
+    creatioEnvironments: [
         {
             name: 'development',
             displayName: 'Development',
-            command_suffix: '-e dev'
+            url: process.env.CREATIO_DEV_URL || 'https://dev.yourcompany.creatio.com',
+            login: process.env.CREATIO_DEV_LOGIN || 'admin@dev.creatio.com',
+            environment: 'dev',
+            description: 'Development environment for testing'
         },
         {
-            name: 'staging', 
+            name: 'test',
+            displayName: 'Test/QA',
+            url: process.env.CREATIO_TEST_URL || 'https://test.yourcompany.creatio.com',
+            login: process.env.CREATIO_TEST_LOGIN || 'admin@test.creatio.com',
+            environment: 'test',
+            description: 'Test environment for QA validation'
+        },
+        {
+            name: 'staging',
             displayName: 'Staging',
-            command_suffix: '-e stage'
+            url: process.env.CREATIO_STAGING_URL || 'https://staging.yourcompany.creatio.com',
+            login: process.env.CREATIO_STAGING_LOGIN || 'admin@staging.creatio.com',
+            environment: 'staging',
+            description: 'Pre-production staging environment'
         },
         {
             name: 'production',
-            displayName: 'Production', 
-            command_suffix: '-e prod'
+            displayName: 'Production',
+            url: process.env.CREATIO_PROD_URL || 'https://yourcompany.creatio.com',
+            login: process.env.CREATIO_PROD_LOGIN || 'admin@yourcompany.creatio.com',
+            environment: 'prod',
+            description: 'Live production environment'
         }
     ],
 
-    // Clio command templates
+    // Clio command templates for Creatio
     clio: {
-        // Base command for installation
-        installCommand: 'clio install-app',
+        // Base commands
+        installAppCommand: 'clio install-app',
+        pushPackageCommand: 'clio push-pkg',
+        installPackageCommand: 'clio install-pkg',
+        compilePackageCommand: 'clio compile-pkg',
         
-        // Command to list packages (customize based on your Clio setup)
+        // Environment management
+        registerEnvCommand: 'clio reg-web-app',
+        listEnvCommand: 'clio show-web-app-list',
+        
+        // Package management
         listPackagesCommand: 'clio get-pkg-list',
+        createPackageCommand: 'clio create-pkg',
         
-        // Command to check environment status
-        statusCommand: 'clio get-env-info',
+        // Development commands
+        generateCommand: 'clio generate',
+        restartCommand: 'clio restart-web-app',
         
         // Timeout for commands in milliseconds
         commandTimeout: 300000 // 5 minutes
     },
+
+    // Creatio-specific package types
+    packageTypes: [
+        {
+            type: 'app',
+            displayName: 'Application Package',
+            description: 'Complete Creatio application with business logic',
+            command: 'install-app'
+        },
+        {
+            type: 'pkg',
+            displayName: 'Custom Package',
+            description: 'Custom development package',
+            command: 'install-pkg'
+        },
+        {
+            type: 'template',
+            displayName: 'Template Package',
+            description: 'Reusable template package',
+            command: 'install-pkg'
+        }
+    ],
 
     // Mock data for demo purposes
     mockData: {
