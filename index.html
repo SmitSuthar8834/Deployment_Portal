@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deployment Portal</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        select, button {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .loading {
+            text-align: center;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Deployment Portal</h1>
+        
+        <div class="form-group">
+            <label for="packageSelect">Select Package:</label>
+            <select id="packageSelect">
+                <option value="">Loading packages...</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="environmentSelect">Select Target Environment:</label>
+            <select id="environmentSelect">
+                <option value="">Loading environments...</option>
+            </select>
+        </div>
+        
+        <button id="deployBtn" onclick="triggerDeployment()" disabled>
+            Deploy Package
+        </button>
+        
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        let packages = [];
+        let environments = [];
+
+        // Load packages and environments on page load
+        window.onload = function() {
+            loadPackages();
+            loadEnvironments();
+        };
+
+        async function loadPackages() {
+            try {
+                const response = await fetch('http://localhost:3000/packages');
+                packages = await response.json();
+                
+                const select = document.getElementById('packageSelect');
+                select.innerHTML = '<option value="">-- Select Package --</option>';
+                
+                packages.forEach(pkg => {
+                    const option = document.createElement('option');
+                    option.value = pkg.name;
+                    option.textContent = `${pkg.name} (v${pkg.version}) - ${pkg.description}`;
+                    select.appendChild(option);
+                });
+                
+                checkFormComplete();
+            } catch (error) {
+                showResult('Failed to load packages: ' + error.message, 'error');
+            }
+        }
+
+        async function loadEnvironments() {
+            try {
+                const response = await fetch('http://localhost:3000/environments');
+                environments = await response.json();
+                
+                const select = document.getElementById('environmentSelect');
+                select.innerHTML = '<option value="">-- Select Environment --</option>';
+                
+                environments.forEach(env => {
+                    const option = document.createElement('option');
+                    option.value = env;
+                    option.textContent = env.charAt(0).toUpperCase() + env.slice(1);
+                    select.appendChild(option);
+                });
+                
+                checkFormComplete();
+            } catch (error) {
+                showResult('Failed to load environments: ' + error.message, 'error');
+            }
+        }
+
+        function checkFormComplete() {
+            const packageSelect = document.getElementById('packageSelect');
+            const environmentSelect = document.getElementById('environmentSelect');
+            const deployBtn = document.getElementById('deployBtn');
+            
+            deployBtn.disabled = !(packageSelect.value && environmentSelect.value);
+        }
+
+        // Add event listeners to check form completion
+        document.getElementById('packageSelect').addEventListener('change', checkFormComplete);
+        document.getElementById('environmentSelect').addEventListener('change', checkFormComplete);
+
+        async function triggerDeployment() {
+            const selectedPackage = document.getElementById('packageSelect').value;
+            const targetEnvironment = document.getElementById('environmentSelect').value;
+            
+            if (!selectedPackage || !targetEnvironment) {
+                showResult('Please select both package and environment', 'error');
+                return;
+            }
+
+            const deployBtn = document.getElementById('deployBtn');
+            deployBtn.disabled = true;
+            deployBtn.textContent = 'Deploying...';
+            
+            showResult('Initiating deployment...', 'loading');
+
+            try {
+                const response = await fetch('http://localhost:3000/deploy', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        selectedPackage,
+                        targetEnvironment
+                    })
+                });
+
+                const result = await response.json();
+                showResult(result.message, 'success');
+                
+            } catch (error) {
+                showResult('Deployment failed: ' + error.message, 'error');
+            } finally {
+                deployBtn.disabled = false;
+                deployBtn.textContent = 'Deploy Package';
+                checkFormComplete();
+            }
+        }
+
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = `result ${type}`;
+            resultDiv.style.display = 'block';
+            
+            if (type === 'success') {
+                setTimeout(() => {
+                    resultDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+    </script>
+</body>
+</html>
